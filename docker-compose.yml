@@ -1,0 +1,62 @@
+services:
+  # PostgreSQL database with PostGIS
+  postgres:
+    image: mdillon/postgis:9.6
+    restart: always
+    ports:
+      - "5555:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: engineTest888
+      POSTGRES_DB: property_search
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - property-search-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: engineTest888
+      DB_NAME: property_search
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - property-search-network
+
+  # Frontend web application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - property-search-network
+
+volumes:
+  pg-data:
+
+networks:
+  property-search-network:
+    driver: bridge
+
